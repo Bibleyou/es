@@ -1,0 +1,232 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<title>Quiz Bíblico Diario</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600&family=Inter:wght@300;400&display=swap" rel="stylesheet">
+
+<style>
+body {
+  margin: 0;
+  font-family: 'Inter', sans-serif;
+  background: #121212;
+  color: #eee;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 100vh;
+}
+
+.quiz-box {
+  background: #1c1c1c;
+  max-width: 540px;
+  width: 90%;
+  padding: 26px;
+  border-radius: 16px;
+  box-shadow: 0 10px 40px rgba(0,0,0,0.6);
+  animation: fadeIn .8s ease;
+}
+
+h1 {
+  font-family: 'Playfair Display', serif;
+  text-align: center;
+}
+
+.subtitle {
+  text-align: center;
+  font-size: 14px;
+  color: #bbb;
+  margin-bottom: 18px;
+}
+
+.progress {
+  height: 6px;
+  background: #333;
+  border-radius: 10px;
+  overflow: hidden;
+  margin-bottom: 18px;
+}
+
+.progress-bar {
+  height: 100%;
+  background: #c9a86a;
+  width: 0%;
+  transition: width .4s ease;
+}
+
+.question { font-size: 18px; margin-bottom: 15px; }
+
+.option {
+  background: #2a2a2a;
+  padding: 12px;
+  border-radius: 8px;
+  margin-bottom: 10px;
+  cursor: pointer;
+}
+
+.option:hover { background: #3a3a3a; }
+.correct { background: #2e7d32; }
+.wrong { background: #8e2a2a; }
+
+.verse {
+  margin-top: 12px;
+  font-size: 14px;
+  color: #c9a86a;
+}
+
+button {
+  width: 100%;
+  margin-top: 14px;
+  padding: 12px;
+  border: none;
+  border-radius: 10px;
+  background: #c9a86a;
+  font-size: 16px;
+  cursor: pointer;
+}
+
+.secondary {
+  background: #444;
+  color: #fff;
+}
+
+.share {
+  background: #2f2f2f;
+  color: #fff;
+}
+
+.result {
+  text-align: center;
+  font-size: 20px;
+}
+
+@keyframes fadeIn {
+  from {opacity:0; transform:translateY(10px);}
+  to {opacity:1; transform:translateY(0);}
+}
+</style>
+</head>
+
+<body>
+
+<div class="quiz-box">
+  <h1>📖 Quiz Bíblico Diario</h1>
+  <div class="subtitle">Un nuevo quiz cada día</div>
+
+  <div class="progress">
+    <div class="progress-bar" id="progress"></div>
+  </div>
+
+  <div id="quiz"></div>
+
+  <button id="nextBtn" onclick="nextQuestion()">Continuar</button>
+  <button id="shareBtn" class="share" onclick="shareResult()" style="display:none">
+    🔗 Compartir mi resultado
+  </button>
+  <button id="nextQuizBtn" class="secondary" onclick="nextQuiz()" style="display:none">
+    ▶️ Próximo Quiz
+  </button>
+</div>
+
+<script>
+const questionPools = [
+[
+ {q:"¿Quién construyó el arca?",o:["Noé","Abraham","Moisés","David"],a:0,v:"Génesis 6:14"},
+ {q:"¿Quién derrotó a Goliat?",o:["Saúl","David","Josué","Sansón"],a:1,v:"1 Samuel 17:50"},
+ {q:"¿Quién fue tragado por un gran pez?",o:["Jonás","Elías","Jeremías","Amós"],a:0,v:"Jonás 1:17"}
+],
+[
+ {q:"¿Quién recibió los Diez Mandamientos?",o:["Moisés","Abraham","Josué","Aarón"],a:0,v:"Éxodo 20:1"},
+ {q:"¿Quién negó a Jesús tres veces?",o:["Pedro","Juan","Tomás","Santiago"],a:0,v:"Lucas 22:61"},
+ {q:"¿Qué discípulo estuvo al pie de la cruz?",o:["Pedro","Juan","Mateo","Tomás"],a:1,v:"Juan 19:26"}
+],
+[
+ {q:"¿Quién lideró la caída de Jericó?",o:["Moisés","Josué","Gedeón","Caleb"],a:1,v:"Josué 6:20"},
+ {q:"¿Quién escribió Apocalipsis?",o:["Pablo","Pedro","Juan","Lucas"],a:2,v:"Apocalipsis 1:1"},
+ {q:"¿Quién fue llamado amigo de Dios?",o:["Noé","Isaac","Abraham","Jacob"],a:2,v:"Santiago 2:23"}
+],
+[
+ {q:"¿Quién sobrevivió al foso de los leones?",o:["Daniel","David","Jeremías","Elías"],a:0,v:"Daniel 6:22"},
+ {q:"¿Quién construyó el templo?",o:["David","Salomón","Saúl","Esdras"],a:1,v:"1 Reyes 6:1"},
+ {q:"¿Quién escribió Proverbios?",o:["David","Salomón","Asaf","Pablo"],a:1,v:"Proverbios 1:1"}
+]
+];
+
+const todayKey = new Date().toISOString().slice(0,10)
+  .split("-").reduce((a,b)=>a+parseInt(b),0);
+
+let quizIndex = todayKey % questionPools.length;
+let quizData = questionPools[quizIndex];
+let index = 0;
+let score = 0;
+let answered = false;
+
+function loadQuestion() {
+  answered = false;
+  const q = quizData[index];
+  document.getElementById("quiz").innerHTML = `
+    <div class="question">${q.q}</div>
+    ${q.o.map((opt,i)=>`<div class="option" onclick="select(${i})">${opt}</div>`).join("")}`;
+  updateProgress();
+}
+
+function select(i) {
+  if (answered) return;
+  answered = true;
+  const q = quizData[index];
+  document.querySelectorAll(".option").forEach((el,idx)=>{
+    if (idx === q.a) el.classList.add("correct");
+    if (idx === i && idx !== q.a) el.classList.add("wrong");
+  });
+  if (i === q.a) score++;
+  document.getElementById("quiz").innerHTML += `<div class="verse">📜 ${q.v}</div>`;
+}
+
+function nextQuestion() {
+  if (!answered) return;
+  index++;
+  if (index < quizData.length) loadQuestion();
+  else endQuiz();
+}
+
+function endQuiz() {
+  document.getElementById("quiz").innerHTML = `
+    <div class="result">✅ Acertaste ${score} de ${quizData.length}<br><br>🕯️ Sigue aprendiendo</div>`;
+  document.getElementById("nextBtn").style.display = "none";
+  document.getElementById("shareBtn").style.display = "block";
+  document.getElementById("nextQuizBtn").style.display = "block";
+  updateProgress(true);
+}
+
+function nextQuiz() {
+  quizIndex = (quizIndex + 1) % questionPools.length;
+  quizData = questionPools[quizIndex];
+  index = 0;
+  score = 0;
+  answered = false;
+  document.getElementById("nextBtn").style.display = "block";
+  document.getElementById("shareBtn").style.display = "none";
+  document.getElementById("nextQuizBtn").style.display = "none";
+  loadQuestion();
+}
+
+function updateProgress(end=false) {
+  document.getElementById("progress").style.width = (end ? 100 : (index / quizData.length) * 100) + "%";
+}
+
+function shareResult() {
+  const text = `Acierté ${score} de ${quizData.length} en el Quiz Bíblico Diario 📖`;
+  if (navigator.share) {
+    navigator.share({ title: "Quiz Bíblico Diario", text, url: window.location.href });
+  } else {
+    window.open(`https://wa.me/?text=${encodeURIComponent(text + " " + window.location.href)}`);
+  }
+}
+
+loadQuestion();
+</script>
+
+</body>
+</html>
